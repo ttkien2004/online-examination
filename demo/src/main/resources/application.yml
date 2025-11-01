@@ -1,0 +1,17 @@
+spring:
+  devtools:
+    restart:
+      enabled: true
+      poll-interval: 1000ms
+      quiet-period: 400ms
+      additional-paths: /app/src
+    livereload:
+      enabled: true
+  sql:
+    init:
+      encoding: UTF-8
+
+logging:
+  level:
+    org.springframework.web.servlet.handler: DEBUG
+    cnpmnc.demo: DEBUG # in cả System.out.println

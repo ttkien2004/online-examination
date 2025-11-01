@@ -1,0 +1,71 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-java-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword # Mật khẩu root của bạn
+      MYSQL_DATABASE: springdb
+      MYSQL_USER: springuser
+      MYSQL_PASSWORD: springpass
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    # Yêu cầu Docker kiểm tra sức khỏe của service mysql
+    healthcheck:
+      # Lệnh kiểm tra là 'mysqladmin ping' với user root
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-prootpassword",
+        ]
+      interval: 10s # Kiểm tra mỗi 10 giây
+      timeout: 5s # Thời gian chờ
+      retries: 10 # Thử lại 10 lần
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: spring-boot-app
+    restart: no
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DEVTOOLS_RESTART_ENABLED: true
+      SPRING_DEVTOOLS_LIVERELOAD_ENABLED: true
+      SPRING_DEVTOOLS_RESTART_ADDITIONAL_PATHS: /app/src
+    # Yêu cầu 'app' chờ 'mysql' đến khi có trạng thái "healthy"
+    volumes:
+      - .:/app
+      # - ./src:/app/src
+      # - ./pom.xml:/app/pom.xml
+    command: >
+      ./mvnw spring-boot:run 
+      -Dspring-boot.run.arguments="
+      --spring.datasource.url=${DB_URL}
+      --spring.datasource.username=${DB_USERNAME}
+      --spring.datasource.password=${DB_PASSWORD}
+      --spring.sql.init.mode=always
+      --spring.sql.init.schema-locations=classpath:schema.sql
+      --spring.sql.init.data-locations=classpath:data.sql
+      "
+    depends_on:
+      mysql:
+        condition: service_healthy
+    tty: true
+    stdin_open: true
+
+volumes:
+  mysql_data:
